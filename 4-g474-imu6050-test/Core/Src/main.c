@@ -104,6 +104,18 @@ void ssd1306_ShowDistance(float dist)
 
     ssd1306_UpdateScreen();
 }
+
+int _write(int file, char *ptr, int len)
+{
+  (void)file;
+  int DataIdx;
+
+  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  {
+    ITM_SendChar(*ptr++);
+  }
+  return len;
+}
 /* USER CODE END 0 */
 
 /**
@@ -177,7 +189,7 @@ int main(void)
 	  	    100);
 
 	  	ssd1306_ShowDistance(whoami);
-//	  	printf("WHOAMI=%d\r\n", whoami);
+	  	printf("WHOAMI=%d\r\n", whoami);
 //
 //	  	HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
