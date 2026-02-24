@@ -1,0 +1,3 @@
+../Core/Src/motor.c:6:13:set_motor	8
+../Core/Src/motor.c:37:6:Motor_Set	1
+../Core/Src/motor.c:52:6:Motor_Stop	1
