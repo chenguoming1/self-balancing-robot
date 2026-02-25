@@ -1,6 +1,5 @@
 #include "motor.h"
 #include "main.h"
-#include <stdlib.h>   // abs()
 
 /* ── Internal helper ─────────────────────────────────────────────────── */
 static void set_motor(uint32_t pwm_ch,
@@ -12,24 +11,23 @@ static void set_motor(uint32_t pwm_ch,
     if (speed >  (int32_t)MOTOR_PWM_MAX) speed =  (int32_t)MOTOR_PWM_MAX;
     if (speed < -(int32_t)MOTOR_PWM_MAX) speed = -(int32_t)MOTOR_PWM_MAX;
 
-    uint32_t duty = (uint32_t)abs((int)speed);
-
     if (speed > 0) {
-        /* Forward */
+        /* Forward: IN1=HIGH  IN2=LOW  PWM=duty */
         HAL_GPIO_WritePin(in1_port, in1_pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(in2_port, in2_pin, GPIO_PIN_RESET);
+        __HAL_TIM_SET_COMPARE(&htim1, pwm_ch, (uint32_t)speed);
     } else if (speed < 0) {
-        /* Reverse */
+        /* Reverse: IN1=LOW  IN2=HIGH  PWM=duty
+           TB6612 needs PWM > 0 to actually spin in reverse */
         HAL_GPIO_WritePin(in1_port, in1_pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(in2_port, in2_pin, GPIO_PIN_SET);
+        __HAL_TIM_SET_COMPARE(&htim1, pwm_ch, (uint32_t)(-speed));
     } else {
-        /* Brake: both IN pins HIGH = short brake on TB6612 */
+        /* Short brake: IN1=HIGH  IN2=HIGH  PWM=0 */
         HAL_GPIO_WritePin(in1_port, in1_pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(in2_port, in2_pin, GPIO_PIN_SET);
-        duty = 0;
+        __HAL_TIM_SET_COMPARE(&htim1, pwm_ch, 0);
     }
-
-    __HAL_TIM_SET_COMPARE(&htim1, pwm_ch, duty);
 }
 
 /* ── Public API ──────────────────────────────────────────────────────── */
