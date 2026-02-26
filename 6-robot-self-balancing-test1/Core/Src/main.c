@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "debug.h"
 #include "mpu6050.h"
 #include "pid.h"
 #include "motor.h"
@@ -65,6 +66,8 @@ static float          g_angle_setpoint = 0.0f;  // tune via BT: "A1.5\n"
 static RingBuffer_t   g_bt_rb;
 static volatile float g_bt_speed_bias = 0.0f;
 
+/* Last PID output – written by TIM4 ISR, read by main loop for debug */
+static volatile float g_pid_output = 0.0f;
 /* Single-byte DMA-free UART RX buffer (re-armed in callback) */
 static uint8_t s_uart_rx_byte;
 
@@ -126,10 +129,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
   rb_init(&g_bt_rb);
 
+  Debug_Init(&huart2);
+
    /* Wait until MPU6050 responds on I2C */
    while (!MPU6050_Init(&hi2c1)) {
        HAL_Delay(100);
    }
+   Debug_Print("MPU6050 OK\r\n");
 
    /* Balance PID – start conservative, tune via Bluetooth
       Send: P30.0\n   I0.3\n   D1.5\n   A1.0\n             */
@@ -171,6 +177,7 @@ int main(void)
 	          if (fabsf(g_imu.angle) > 45.0f) {
 	              Motor_Stop();
 	              PID_Reset(&g_balance_pid);
+	              Debug_Print("FALL DETECTED...");
 	          }
 
 	          /* 3. Optional telemetry – uncomment to stream angle over BT
@@ -183,6 +190,18 @@ int main(void)
 	              HAL_UART_Transmit(&huart2, (uint8_t *)buf, n, 10);
 	          }
 	          */
+
+	          /* 3. Stream debug data over Bluetooth every DEBUG_INTERVAL_MS */
+	                  Debug_Update(g_imu.angle,
+	                               g_imu.gyro_rate,
+	                               g_imu.accel_angle,
+	                               g_pid_output,
+	                               enc_left.delta,
+	                               enc_right.delta,
+	                               g_angle_setpoint,
+	                               g_balance_pid.Kp,
+	                               g_balance_pid.Ki,
+	                               g_balance_pid.Kd);
 	/* 4. Sleep until next interrupt */
 	__WFI();
   }
@@ -570,6 +589,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
                                 g_imu.angle,
                                 CONTROL_LOOP_DT);
 
+    g_pid_output = pid_out;   // expose to main loop for debug
+
     /* Step 4 – Apply BT speed bias (forward/backward commands) */
     int32_t left_pwm  = (int32_t)(pid_out + g_bt_speed_bias);
     int32_t right_pwm = (int32_t)(pid_out + g_bt_speed_bias);
@@ -594,18 +615,46 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
    ═══════════════════════════════════════════════════════════════════════ */
 static void apply_bt_command(const BT_Command_t *cmd)
 {
+    char buf[48];
     switch (cmd->type) {
-        case BT_CMD_FORWARD:          g_bt_speed_bias =  cmd->value; break;
-        case BT_CMD_BACKWARD:         g_bt_speed_bias = -cmd->value; break;
-        case BT_CMD_STOP:             g_bt_speed_bias =  0.0f;       break;
-        case BT_CMD_SET_KP:           g_balance_pid.Kp = cmd->value; break;
+        case BT_CMD_FORWARD:
+            g_bt_speed_bias =  cmd->value;
+            snprintf(buf, sizeof(buf), "CMD: Forward %.1f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_BACKWARD:
+            g_bt_speed_bias = -cmd->value;
+            snprintf(buf, sizeof(buf), "CMD: Backward %.1f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_STOP:
+            g_bt_speed_bias = 0.0f;
+            Debug_Print("CMD: Stop\r\n");
+            break;
+        case BT_CMD_SET_KP:
+            g_balance_pid.Kp = cmd->value;
+            snprintf(buf, sizeof(buf), "SET Kp=%.3f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
         case BT_CMD_SET_KI:
             g_balance_pid.Ki = cmd->value;
             PID_Reset(&g_balance_pid);
+            snprintf(buf, sizeof(buf), "SET Ki=%.3f (integral reset)\r\n", cmd->value);
+            Debug_Print(buf);
             break;
-        case BT_CMD_SET_KD:           g_balance_pid.Kd = cmd->value; break;
-        case BT_CMD_SET_ANGLE_OFFSET: g_angle_setpoint = cmd->value; break;
-        default: break;
+        case BT_CMD_SET_KD:
+            g_balance_pid.Kd = cmd->value;
+            snprintf(buf, sizeof(buf), "SET Kd=%.3f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_SET_ANGLE_OFFSET:
+            g_angle_setpoint = cmd->value;
+            snprintf(buf, sizeof(buf), "SET Setpoint=%.2f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        default:
+            Debug_Print("CMD: Unknown\r\n");
+            break;
     }
 }
 /* USER CODE END 4 */
