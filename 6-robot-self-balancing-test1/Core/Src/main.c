@@ -138,13 +138,14 @@ int main(void)
    Debug_Print("MPU6050 OK\r\n");
 
    /* Balance PID – start conservative, tune via Bluetooth
-      Send: P30.0\n   I0.3\n   D1.5\n   A1.0\n             */
-   PID_Init(&g_balance_pid,
-            /*Kp=*/25.0f,
-            /*Ki=*/0.3f,
-            /*Kd=*/1.2f,
-            /*integral_limit=*/200.0f,
-            /*output_limit=*/(float)MOTOR_PWM_MAX);
+      // Send: P30.0\n   I0.3\n   D1.5\n   A1.0\n             */
+  PID2_Init(&g_balance_pid,
+         /*Kp=*/75.0f,
+         /*Ki=*/0.2f,
+         /*Kd=*/6.6f,
+         /*integral_limit=*/200.0f,
+         /*output_limit=*/(float)MOTOR_PWM_MAX,
+         /*d_filter_alpha=*/0.05f);
 
    Encoder_Start();   // starts TIM2 + TIM3 in encoder mode
 
@@ -642,6 +643,15 @@ static void apply_bt_command(const BT_Command_t *cmd)
             snprintf(buf, sizeof(buf), "SET Ki=%.3f (integral reset)\r\n", cmd->value);
             Debug_Print(buf);
             break;
+//        case BT_CMD_SET_DFILTER:
+//            /* clamp 0..1 */
+//            float alpha = cmd->value;
+//            if (alpha < 0.0f) alpha = 0.0f;
+//            if (alpha > 1.0f) alpha = 1.0f;
+//            g_balance_pid.d_filter_alpha = alpha;
+//            snprintf(buf, sizeof(buf), "SET d_filter_alpha=%.3f\r\n", alpha);
+//            Debug_Print(buf);
+//            break;
         case BT_CMD_SET_KD:
             g_balance_pid.Kd = cmd->value;
             snprintf(buf, sizeof(buf), "SET Kd=%.3f\r\n", cmd->value);

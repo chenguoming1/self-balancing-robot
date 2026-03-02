@@ -22,14 +22,15 @@ bool BT_Parse(RingBuffer_t *rb, BT_Command_t *cmd)
             float  val       = (line[1] != '\0') ? (float)atof(&line[1]) : 0.0f;
 
             switch (type_char) {
-                case 'F': cmd->type = BT_CMD_FORWARD;       break;
-                case 'B': cmd->type = BT_CMD_BACKWARD;      break;
-                case 'S': cmd->type = BT_CMD_STOP;          break;
-                case 'P': cmd->type = BT_CMD_SET_KP;        break;
-                case 'I': cmd->type = BT_CMD_SET_KI;        break;
-                case 'D': cmd->type = BT_CMD_SET_KD;        break;
+                case 'F': cmd->type = BT_CMD_FORWARD;          break;
+                case 'B': cmd->type = BT_CMD_BACKWARD;         break;
+                case 'S': cmd->type = BT_CMD_STOP;             break;
+                case 'P': cmd->type = BT_CMD_SET_KP;           break;
+                case 'I': cmd->type = BT_CMD_SET_KI;           break;
+                case 'D': cmd->type = BT_CMD_SET_KD;           break;
                 case 'A': cmd->type = BT_CMD_SET_ANGLE_OFFSET; break;
-                default:  cmd->type = BT_CMD_NONE;          break;
+                case 'L': cmd->type = BT_CMD_SET_DFILTER;      break;
+                default:  cmd->type = BT_CMD_NONE;             break;
             }
             cmd->value = val;
             return (cmd->type != BT_CMD_NONE);

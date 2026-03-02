@@ -15,6 +15,7 @@
      I0.1\n  → set Ki = 0.1
      D0.05\n → set Kd = 0.05
      A1.5\n  → set balance setpoint angle = 1.5°
+     L0.1\n  → set derivative filter alpha (0..1)
    ─────────────────────────────────────────────────────────────────────── */
 
 #define BT_CMD_BUF_LEN  32u
@@ -28,6 +29,7 @@ typedef enum {
     BT_CMD_SET_KI,
     BT_CMD_SET_KD,
     BT_CMD_SET_ANGLE_OFFSET,
+    BT_CMD_SET_DFILTER,
 } BT_CmdType_t;
 
 typedef struct {
