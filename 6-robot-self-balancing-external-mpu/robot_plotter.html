@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Self-Balance Robot — Live Plotter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0a0e1a; --panel:#0f1525; --border:#1e2a45;
+      --accent:#00d4ff; --green:#00ff9d; --yellow:#ffd93d;
+      --red:#ff4d6d; --purple:#b388ff; --orange:#ff9a3c;
+      --dim:#2a3a5c; --text:#c8d8f0; --textDim:#4a6080;
+    }
+    body { font-family:'JetBrains Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    /* Header */
+    header { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--panel); border-bottom:1px solid var(--border); }
+    .title  { font-size:13px; letter-spacing:4px; color:var(--accent); text-transform:uppercase; font-weight:700; }
+    .subtitle { font-size:10px; color:var(--textDim); margin-top:4px; letter-spacing:1px; }
+    .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--textDim); margin-right:6px; transition:all .3s; }
+    .dot.connected { background:var(--green); box-shadow:0 0 8px var(--green); }
+
+    /* Buttons */
+    .btn-row { display:flex; gap:8px; align-items:center; }
+    button {
+      font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px;
+      text-transform:uppercase; padding:6px 16px; border-radius:5px; cursor:pointer;
+      border:1px solid var(--border); background:transparent; color:var(--textDim); transition:all .2s;
+    }
+    button:hover { opacity:.85; }
+    #btn-connect { border-color:var(--green); color:var(--green); }
+    #btn-connect.connected { border-color:var(--red); color:var(--red); }
+    #btn-pause  { border-color:var(--yellow); color:var(--yellow); }
+    #btn-clear  { border-color:var(--textDim); color:var(--textDim); }
+
+    /* Body layout */
+    .body { padding:20px 24px; display:flex; flex-direction:column; gap:20px; }
+
+    /* Top row: 3D viewer + stats */
+    .top-row { display:grid; grid-template-columns:420px 1fr; gap:16px; align-items:start; }
+    @media(max-width:900px){ .top-row{ grid-template-columns:1fr; } }
+
+    /* 3D Viewer */
+    .viewer-card {
+      background:var(--panel); border:1px solid var(--border);
+      border-top:2px solid var(--accent); border-radius:8px; overflow:hidden; position:relative;
+    }
+    .viewer-header {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:10px 14px; font-size:10px; letter-spacing:3px;
+      text-transform:uppercase; color:var(--accent); border-bottom:1px solid var(--border);
+    }
+    .viewer-angle { font-size:18px; font-weight:700; color:var(--accent); }
+    #three-canvas { display:block; width:100% !important; height:280px; }
+    .viewer-overlay {
+      position:absolute; bottom:52px; left:14px;
+      font-size:9px; letter-spacing:1px; color:var(--textDim); pointer-events:none;
+    }
+
+    /* Angle bar */
+    .angle-bar-wrap { padding:8px 14px 10px; border-top:1px solid var(--border); }
+    .angle-bar-track { position:relative; height:6px; background:var(--dim); border-radius:3px; }
+    .angle-bar-fill  { position:absolute; top:0; bottom:0; background:var(--accent); border-radius:3px; transition:left .05s,width .05s; }
+    .angle-bar-center { position:absolute; top:-4px; bottom:-4px; left:50%; width:2px; background:var(--textDim); transform:translateX(-50%); }
+    .angle-bar-labels { display:flex; justify-content:space-between; font-size:9px; color:var(--textDim); margin-top:4px; }
+
+    /* Stats */
+    .stats-panel { display:flex; flex-direction:column; gap:10px; }
+    .stats-row   { display:flex; gap:10px; flex-wrap:wrap; }
+    .stat-card   { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:10px 14px; flex:1; min-width:100px; }
+    .stat-label  { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--textDim); margin-bottom:4px; }
+    .stat-value  { font-size:20px; font-weight:700; }
+
+    /* Toggles */
+    .toggle-row  { display:flex; gap:8px; flex-wrap:wrap; }
+    .toggle-btn  { font-size:10px; padding:5px 12px; opacity:.4; transition:opacity .2s; }
+    .toggle-btn.active { opacity:1; }
+
+    /* Charts */
+    .chart-grid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+    .chart-card  { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+    .chart-header{ display:flex; justify-content:space-between; font-size:10px; letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; }
+    .chart-current{ font-weight:700; }
+    canvas { width:100% !important; }
+
+    /* Log */
+    .log-panel { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 16px; max-height:160px; overflow-y:auto; font-size:11px; }
+    .log-label  { font-size:10px; letter-spacing:2px; color:var(--textDim); margin-bottom:8px; }
+    .log-line   { margin-bottom:2px; }
+    .log-line.info  { color:var(--textDim); }
+    .log-line.ok    { color:var(--green); }
+    .log-line.warn  { color:var(--yellow); }
+    .log-line.error { color:var(--red); }
+    .log-ts { color:var(--dim); }
+
+    /* Instructions */
+    .instructions { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px 20px; font-size:11px; color:var(--textDim); line-height:2; }
+    .instructions .heading { color:var(--accent); letter-spacing:2px; font-size:10px; margin-bottom:8px; }
+    .hl-green  { color:var(--green); }
+    .hl-yellow { color:var(--yellow); }
+    .hl-red    { color:var(--red); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">⚡ Self-Balance Robot — Live Plotter</div>
+    <div class="subtitle">
+      <span class="dot" id="dot"></span>
+      <span id="status-text">Disconnected</span> · <span id="pt-count">0</span> pts
+    </div>
+  </div>
+  <div class="btn-row">
+    <button id="btn-pause">⏸ Pause</button>
+    <button id="btn-clear">✕ Clear</button>
+    <button id="btn-connect">Connect Serial</button>
+  </div>
+</header>
+
+<div class="body">
+
+  <div class="top-row">
+
+    <!-- ── 3D Orientation Viewer ─────────────────────────────────── -->
+    <div class="viewer-card">
+      <div class="viewer-header">
+        <span>3D Orientation</span>
+        <span class="viewer-angle" id="viewer-angle">+0.00°</span>
+      </div>
+      <canvas id="three-canvas"></canvas>
+      <div class="viewer-overlay">PITCH (X-AXIS) · MPU6050 · COMPLEMENTARY FILTER</div>
+      <div class="angle-bar-wrap">
+        <div class="angle-bar-track">
+          <div class="angle-bar-center"></div>
+          <div class="angle-bar-fill" id="angle-bar"></div>
+        </div>
+        <div class="angle-bar-labels"><span>-45°</span><span>0°</span><span>+45°</span></div>
+      </div>
+    </div>
+
+    <!-- ── Stats ─────────────────────────────────────────────────── -->
+    <div class="stats-panel">
+      <div class="stats-row" id="stats-row"></div>
+    </div>
+
+  </div>
+
+  <div class="toggle-row" id="toggle-row"></div>
+  <div class="chart-grid"  id="chart-grid"></div>
+
+  <div class="log-panel">
+    <div class="log-label">SERIAL LOG</div>
+    <div id="log-body"><div class="log-line info">Waiting for data...</div></div>
+  </div>
+
+  <div class="instructions" id="instructions">
+    <div class="heading">HOW TO USE</div>
+    1. Pair your JDY-23 with this PC over Bluetooth — it shows as a COM port<br/>
+    2. Click <span class="hl-green">Connect Serial</span> and pick that COM port<br/>
+    3. Baud rate is set to <span class="hl-yellow">9600</span> automatically<br/>
+    4. The 3D robot model rotates live with the real pitch angle from MPU6050<br/>
+    5. Use <span class="hl-yellow">Pause</span> to freeze the charts without stopping data<br/>
+    6. Toggle individual series with the buttons above the charts<br/>
+    <br/>
+    <span class="hl-red">⚠ Must be opened directly in Chrome or Edge — not inside another app</span>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   THREE.JS  —  3D ROBOT ORIENTATION VIEWER
+   ════════════════════════════════════════════════════════════════════ */
+(function initThree() {
+  const canvas = document.getElementById("three-canvas");
+  const H = 280;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  function resize() {
+    const w = canvas.parentElement.clientWidth;
+    renderer.setSize(w, H);
+    camera.aspect = w / H;
+    camera.updateProjectionMatrix();
+  }
+
+  const scene  = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a2540);
+  scene.fog = new THREE.FogExp2(0x1a2540, 0.045);
+
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  camera.position.set(0, 2.0, 7.5);  // Side view — shows pitch clearly
+  camera.lookAt(0, 0.4, 0);
+
+  /* Lighting */
+  scene.add(new THREE.AmbientLight(0x4a6a9a, 2.5));
+  const key = new THREE.DirectionalLight(0x60e8ff, 2.8);
+  key.position.set(6, 10, 6);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.near = 0.5;
+  key.shadow.camera.far  = 30;
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffb870, 1.2);
+  fill.position.set(-5, 3, -4);
+  scene.add(fill);
+  const rim = new THREE.PointLight(0x00ff9d, 1.6, 22);
+  rim.position.set(-4, 5, 3);
+  scene.add(rim);
+
+  /* Grid */
+  const grid = new THREE.GridHelper(14, 28, 0x3a5080, 0x253560);
+  grid.position.y = -1.25;
+  scene.add(grid);
+
+  /* Shadow plane */
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(12, 12),
+    new THREE.ShadowMaterial({ opacity: 0.3 })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = -1.25;
+  shadow.receiveShadow = true;
+  scene.add(shadow);
+
+  /* ── Materials ─────────────────────────────────────────────────── */
+  const M = {
+    body:   new THREE.MeshStandardMaterial({ color:0x1e3d6e, roughness:0.25, metalness:0.75, emissive:0x0a1e40, emissiveIntensity:0.2 }),
+    wheel:  new THREE.MeshStandardMaterial({ color:0x2a2a2a, roughness:0.75, metalness:0.3  }),
+    tyre:   new THREE.MeshStandardMaterial({ color:0x303030, roughness:0.9,  metalness:0.05 }),
+    accent: new THREE.MeshStandardMaterial({ color:0x00d4ff, roughness:0.05, metalness:1.0, emissive:0x00d4ff, emissiveIntensity:0.5 }),
+    green:  new THREE.MeshStandardMaterial({ color:0x00ff9d, roughness:0.05, metalness:1.0, emissive:0x00ff9d, emissiveIntensity:0.6 }),
+    orange: new THREE.MeshStandardMaterial({ color:0xff9a3c, roughness:0.1,  metalness:0.8, emissive:0xff9a3c, emissiveIntensity:0.3 }),
+    pcb:    new THREE.MeshStandardMaterial({ color:0x1a6628, roughness:0.6,  metalness:0.15 }),
+    chip:   new THREE.MeshStandardMaterial({ color:0x2e2e45, roughness:0.4,  metalness:0.7  }),
+  };
+
+  /* ── Helpers ───────────────────────────────────────────────────── */
+  const box = (w,h,d,m) => new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m);
+  const cyl = (r,h,s,m) => new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s), m);
+  const sph = (r,m)     => new THREE.Mesh(new THREE.SphereGeometry(r,10,10), m);
+
+  /* ── Robot pivot group ─────────────────────────────────────────── */
+  const robot = new THREE.Group();
+  scene.add(robot);
+
+  /* Chassis */
+  const chassis = box(1.0, 1.9, 0.52, M.body);
+  chassis.castShadow = true;
+  robot.add(chassis);
+
+  /* Glowing edge strips */
+  const sTop = box(0.95, 0.035, 0.54, M.accent);
+  sTop.position.set(0, 0.97, 0);
+  robot.add(sTop);
+  const sBot = box(0.95, 0.035, 0.54, M.accent);
+  sBot.position.set(0, -0.97, 0);
+  robot.add(sBot);
+
+  /* Side accent lines */
+  [-0.5, 0.5].forEach(x => {
+    const s = box(0.035, 1.85, 0.54, M.accent);
+    s.position.set(x, 0, 0);
+    robot.add(s);
+  });
+
+  /* PCB (STM32 Blue Pill style) */
+  const pcb = box(0.72, 0.55, 0.07, M.pcb);
+  pcb.position.set(0, 0.25, 0.24);
+  robot.add(pcb);
+
+  /* STM32 chip */
+  const stm = box(0.20, 0.20, 0.04, M.chip);
+  stm.position.set(0.05, 0.28, 0.28);
+  robot.add(stm);
+
+  /* MPU6050 module */
+  const mpu = box(0.20, 0.14, 0.05, M.pcb);
+  mpu.position.set(-0.22, 0.52, 0.27);
+  robot.add(mpu);
+  const mpuChip = box(0.08, 0.08, 0.03, M.chip);
+  mpuChip.position.set(-0.22, 0.52, 0.30);
+  robot.add(mpuChip);
+
+  /* TB6612 driver module */
+  const drv = box(0.22, 0.18, 0.05, M.pcb);
+  drv.position.set(0.22, -0.3, 0.27);
+  robot.add(drv);
+
+  /* Status LED */
+  const led = sph(0.055, M.green);
+  led.position.set(0.35, 0.72, 0.28);
+  robot.add(led);
+
+  /* BT module (JDY-23) */
+  const bt = box(0.18, 0.28, 0.05, M.pcb);
+  bt.position.set(-0.32, -0.5, 0.27);
+  robot.add(bt);
+
+  /* Antenna */
+  const ant = box(0.025, 0.40, 0.025, M.accent);
+  ant.position.set(0.44, 1.18, 0);
+  robot.add(ant);
+  const antTip = sph(0.04, M.accent);
+  antTip.position.set(0.44, 1.40, 0);
+  robot.add(antTip);
+
+  /* ── Wheels ────────────────────────────────────────────────────── */
+  const wheelGroups = [];
+
+  function makeWheel(x) {
+    const g = new THREE.Group();
+
+    const tyre = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.40, 0.20, 32), M.tyre);
+    tyre.rotation.z = Math.PI / 2;
+    tyre.castShadow = true;
+    g.add(tyre);
+
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.22, 16), M.wheel);
+    hub.rotation.z = Math.PI / 2;
+    g.add(hub);
+
+    /* 5 spokes */
+    for (let i = 0; i < 5; i++) {
+      const sp = box(0.035, 0.34, 0.035, M.accent);
+      sp.rotation.z = (i * Math.PI * 2) / 5;
+      sp.position.x = x > 0 ? 0.07 : -0.07;
+      g.add(sp);
+    }
+
+    /* Centre cap */
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.07, 10), M.accent);
+    cap.rotation.z = Math.PI / 2;
+    cap.position.x = x > 0 ? 0.13 : -0.13;
+    g.add(cap);
+
+    g.position.set(x, -0.82, 0);
+    wheelGroups.push(g);
+    return g;
+  }
+
+  robot.add(makeWheel(-0.75));
+  robot.add(makeWheel( 0.75));
+
+  /* ── Target angle & smoothing ──────────────────────────────────── */
+  let targetPitch  = 0;
+  let currentPitch = 0;
+  let wheelSpin    = 0;
+
+  window.updateOrientation = function(deg) { targetPitch = deg; };
+
+  /* ── Animate ───────────────────────────────────────────────────── */
+  function animate() {
+    requestAnimationFrame(animate);
+
+    /* Smooth pitch toward target */
+    currentPitch += (targetPitch - currentPitch) * 0.40;
+
+    /* PITCH = forward/backward tilt = rotation around X axis.
+       Z rotation was wrong — it caused sideways tilt in the view. */
+    robot.rotation.x = currentPitch * (Math.PI / 180);
+
+    /* Wheels rotate around Z axis (axle runs left-right = X axis,
+       so rolling forward/back is a Z rotation on the wheel group) */
+    wheelSpin += currentPitch * 0.018;
+    wheelGroups.forEach(wg => {
+      wg.children.forEach((c, i) => {
+        if (i < 2) c.rotation.x = wheelSpin;
+      });
+    });
+
+    /* Camera: side view so pitch (forward/backward tilt) is clearly visible.
+       Gentle left-right sway so you see a bit of chassis depth too. */
+    const t = Date.now() * 0.00012;
+    camera.position.x = Math.sin(t) * 2.0;
+    camera.position.z = 7.5;
+    camera.position.y = 2.0;
+    camera.lookAt(0, 0.2, 0);
+
+    renderer.render(scene, camera);
+  }
+
+  resize();
+  window.addEventListener("resize", resize);
+  animate();
+})();
+
+/* ── Angle bar ───────────────────────────────────────────────────── */
+function updateAngleBar(angle) {
+  const clamped = Math.max(-45, Math.min(45, angle));
+  const bar     = document.getElementById("angle-bar");
+  const pos     = (clamped / 45) * 50;  // 50% = half the track
+
+  if (clamped >= 0) {
+    bar.style.left  = "50%";
+    bar.style.width = pos + "%";
+    bar.style.background = "#00d4ff";
+  } else {
+    bar.style.left  = (50 + pos) + "%";
+    bar.style.width = (-pos) + "%";
+    bar.style.background = "#ff4d6d";
+  }
+
+  const el  = document.getElementById("viewer-angle");
+  el.textContent = (angle >= 0 ? "+" : "") + angle.toFixed(2) + "°";
+  el.style.color = Math.abs(angle) > 30 ? "#ff4d6d"
+                 : Math.abs(angle) > 15 ? "#ffd93d"
+                 : "#00d4ff";
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CHART.JS  —  LIVE SERIES PLOTS
+   ════════════════════════════════════════════════════════════════════ */
+const SERIES = [
+  { key:"angle",      label:"Angle (°)",      color:"#00d4ff", yMin:-45,  yMax:45  },
+  { key:"gyroRate",   label:"Gyro Rate (°/s)", color:"#00ff9d", yMin:-300, yMax:300 },
+  { key:"accelAngle", label:"Accel Angle (°)", color:"#ffd93d", yMin:-45,  yMax:45  },
+  { key:"pidOutput",  label:"PID Output",      color:"#ff9a3c", yMin:-999, yMax:999 },
+  { key:"encL",       label:"Encoder Left",    color:"#b388ff", yMin:-50,  yMax:50  },
+  { key:"encR",       label:"Encoder Right",   color:"#ff4d6d", yMin:-50,  yMax:50  },
+];
+
+const MAX_PTS = 200;
+const PANEL   = "#0f1525";
+const DIM     = "#2a3a5c";
+const TEXTDIM = "#4a6080";
+
+let connected = false, paused = false, ptCount = 0;
+let port, reader, buf = "";
+let enabled   = Object.fromEntries(SERIES.map(s => [s.key, true]));
+let chartData = [];
+const charts  = {};
+
+function buildStats() {
+  const row = document.getElementById("stats-row");
+  SERIES.forEach(s => {
+    const c = document.createElement("div");
+    c.className = "stat-card";
+    c.style.borderLeft = `3px solid ${s.color}`;
+    c.innerHTML = `<div class="stat-label">${s.label}</div>
+                   <div class="stat-value" id="stat-${s.key}" style="color:${s.color}">—</div>`;
+    row.appendChild(c);
+  });
+}
+
+function buildToggles() {
+  const row = document.getElementById("toggle-row");
+  SERIES.forEach(s => {
+    const btn = document.createElement("button");
+    btn.className = "toggle-btn active";
+    btn.id = `toggle-${s.key}`;
+    btn.textContent = s.label;
+    btn.style.cssText = `border-color:${s.color};color:${s.color}`;
+    btn.onclick = () => {
+      enabled[s.key] = !enabled[s.key];
+      btn.classList.toggle("active", enabled[s.key]);
+      if (charts[s.key]) { charts[s.key].data.datasets[0].hidden = !enabled[s.key]; charts[s.key].update("none"); }
+    };
+    row.appendChild(btn);
+  });
+}
+
+function buildCharts() {
+  const grid = document.getElementById("chart-grid");
+  SERIES.forEach(s => {
+    const card = document.createElement("div");
+    card.className = "chart-card";
+    card.style.borderTop = `2px solid ${s.color}`;
+    card.innerHTML = `
+      <div class="chart-header">
+        <span style="color:${s.color}">${s.label}</span>
+        <span class="chart-current" id="cur-${s.key}" style="color:${s.color}"></span>
+      </div>
+      <canvas id="canvas-${s.key}" height="120"></canvas>`;
+    grid.appendChild(card);
+
+    const ctx = document.getElementById(`canvas-${s.key}`).getContext("2d");
+    charts[s.key] = new Chart(ctx, {
+      type: "line",
+      data: { labels:[], datasets:[{ data:[], borderColor:s.color, borderWidth:1.5, pointRadius:0, tension:0.2, fill:false }] },
+      options: {
+        animation: false, responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display:false },
+          tooltip: {
+            callbacks: { label: c => c.parsed.y.toFixed(3), title: c => `${c[0].label} ms` },
+            backgroundColor: PANEL, titleColor: TEXTDIM, bodyColor: s.color,
+            borderColor: "#1e2a45", borderWidth: 1,
+          }
+        },
+        scales: {
+          x: { display: false },
+          y: { min:s.yMin, max:s.yMax, grid:{ color:DIM }, ticks:{ color:TEXTDIM, font:{ size:9, family:"JetBrains Mono" } } }
+        }
+      }
+    });
+  });
+}
+
+/* Parse: ms TAB Angle TAB GyroRate TAB AccelAng TAB PID_Out TAB EncL TAB EncR TAB Setpt */
+function parseLine(raw) {
+  const parts = raw.trim().split(/\t/);
+  if (parts.length < 7) return null;
+  const n = parts.map(Number);
+  if (n.some(isNaN)) return null;
+  return { t:n[0], angle:n[1], gyroRate:n[2], accelAngle:n[3], pidOutput:n[4], encL:n[5], encR:n[6], setpoint:n[7]??0 };
+}
+
+function pushPoint(pt) {
+  chartData.push(pt);
+  if (chartData.length > MAX_PTS) chartData.shift();
+  document.getElementById("pt-count").textContent = ++ptCount;
+
+  /* Update 3D + angle bar */
+  if (window.updateOrientation) window.updateOrientation(pt.angle);
+  updateAngleBar(pt.angle);
+
+  SERIES.forEach(s => {
+    const val = pt[s.key];
+    document.getElementById(`stat-${s.key}`).textContent = val !== undefined ? val.toFixed(2) : "—";
+    const cur = document.getElementById(`cur-${s.key}`);
+    if (cur) cur.textContent = val !== undefined ? val.toFixed(2) : "";
+    const ch = charts[s.key];
+    ch.data.labels.push(pt.t);
+    ch.data.datasets[0].data.push(val);
+    if (ch.data.labels.length > MAX_PTS) { ch.data.labels.shift(); ch.data.datasets[0].data.shift(); }
+    ch.update("none");
+  });
+}
+
+function log(msg, type = "info") {
+  const body = document.getElementById("log-body");
+  const div  = document.createElement("div");
+  div.className = `log-line ${type}`;
+  div.innerHTML = `<span class="log-ts">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+  body.appendChild(div);
+  while (body.children.length > 80) body.removeChild(body.firstChild);
+  body.scrollTop = body.scrollHeight;
+}
+
+async function connect() {
+  if (!("serial" in navigator)) { log("Web Serial not available. Open this file directly in Chrome/Edge.", "error"); return; }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate:9600, dataBits:8, stopBits:1, parity:"none" });
+    connected = true;
+    document.getElementById("dot").classList.add("connected");
+    document.getElementById("status-text").textContent = "Connected";
+    document.getElementById("btn-connect").textContent = "Disconnect";
+    document.getElementById("btn-connect").classList.add("connected");
+    document.getElementById("instructions").style.display = "none";
+    log("Serial port opened at 9600 baud", "ok");
+
+    const decoder = new TextDecoder();
+    reader = port.readable.getReader();
+
+    (async () => {
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop();
+          for (const line of lines) {
+            const t = line.trim();
+            if (!t) continue;
+            if (t.startsWith("---") || t.startsWith("[ms]") || t.startsWith("CMD") ||
+                t.startsWith("SET") || t.startsWith("MPU") || t.startsWith("FALL")) {
+              log(t, t.includes("FALL") ? "warn" : (t.startsWith("SET")||t.startsWith("CMD")) ? "ok" : "info");
+              continue;
+            }
+            const pt = parseLine(t);
+            if (pt && !paused) pushPoint(pt);
+          }
+        }
+      } catch(e) { log(`Read error: ${e.message}`, "error"); }
+      finally    { onDisconnect(); }
+    })();
+  } catch(e) { log(`Connect failed: ${e.message}`, "error"); }
+}
+
+async function disconnect() {
+  try { reader?.cancel(); } catch {}
+  try { await port?.close(); } catch {}
+  onDisconnect();
+}
+
+function onDisconnect() {
+  connected = false;
+  document.getElementById("dot").classList.remove("connected");
+  document.getElementById("status-text").textContent = "Disconnected";
+  document.getElementById("btn-connect").textContent = "Connect Serial";
+  document.getElementById("btn-connect").classList.remove("connected");
+  log("Port closed", "warn");
+}
+
+document.getElementById("btn-connect").onclick = () => connected ? disconnect() : connect();
+document.getElementById("btn-pause").onclick = function() { paused=!paused; this.textContent=paused?"▶ Resume":"⏸ Pause"; };
+document.getElementById("btn-clear").onclick = () => {
+  chartData=[]; ptCount=0;
+  document.getElementById("pt-count").textContent="0";
+  document.getElementById("log-body").innerHTML="";
+  if (window.updateOrientation) window.updateOrientation(0);
+  updateAngleBar(0);
+  SERIES.forEach(s => {
+    const ch = charts[s.key];
+    ch.data.labels=[]; ch.data.datasets[0].data=[]; ch.update("none");
+    document.getElementById(`stat-${s.key}`).textContent="—";
+  });
+};
+
+buildStats();
+buildToggles();
+buildCharts();
+updateAngleBar(0);
+</script>
+</body>
+</html>

@@ -38,7 +38,8 @@ bool MPU6050_Init(I2C_HandleTypeDef *hi2c)
     if (write_reg(hi2c, MPU6050_REG_SMPLRT_DIV, 0x07) != HAL_OK) return false;
 
     // DLPF config = 3 → ~44 Hz bandwidth, reduces vibration noise
-    if (write_reg(hi2c, MPU6050_REG_CONFIG, 0x03) != HAL_OK) return false;
+//    if (write_reg(hi2c, MPU6050_REG_CONFIG, 0x03) != HAL_OK) return false;//~44 Hz
+    if (write_reg(hi2c, MPU6050_REG_CONFIG, 0x05) != HAL_OK) return false;//~10 Hz
 
     // Gyro ±250°/s
     if (write_reg(hi2c, MPU6050_REG_GYRO_CONFIG, 0x00) != HAL_OK) return false;

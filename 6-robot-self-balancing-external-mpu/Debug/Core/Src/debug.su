@@ -1,0 +1,4 @@
+../Core/Src/debug.c:9:13:uart_send	16	static
+../Core/Src/debug.c:20:6:Debug_Init	216	static
+../Core/Src/debug.c:67:6:Debug_Update	240	static
+../Core/Src/debug.c:123:6:Debug_Print	16	static

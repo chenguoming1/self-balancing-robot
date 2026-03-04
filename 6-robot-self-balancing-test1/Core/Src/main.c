@@ -62,7 +62,7 @@ UART_HandleTypeDef huart2;
 /* ── Shared application state ───────────────────────────────────────── */
 static MPU6050_Data_t g_imu          = {0};
 static PID_t          g_balance_pid;
-static float          g_angle_setpoint = 0.0f;  // tune via BT: "A1.5\n"
+static float          g_angle_setpoint = 1.3f;  // tune via BT: "A1.5\n"
 static RingBuffer_t   g_bt_rb;
 static volatile float g_bt_speed_bias = 0.0f;
 
@@ -137,15 +137,21 @@ int main(void)
    }
    Debug_Print("MPU6050 OK\r\n");
 
-   /* Balance PID – start conservative, tune via Bluetooth
-      // Send: P30.0\n   I0.3\n   D1.5\n   A1.0\n             */
-  PID2_Init(&g_balance_pid,
-         /*Kp=*/75.0f,
-         /*Ki=*/0.2f,
-         /*Kd=*/6.6f,
-         /*integral_limit=*/200.0f,
-         /*output_limit=*/(float)MOTOR_PWM_MAX,
-         /*d_filter_alpha=*/0.05f);
+   /* Calibrate — robot must be held STILL and UPRIGHT for ~1 second.
+      This zeroes the gyro bias and angle offset so that true upright
+      reads as exactly 0.0 degrees, regardless of MPU mounting angle.
+      After this, A setpoint of 0.0 means perfectly balanced.         */
+//   Debug_Print("Calibrating — hold robot upright and still...\r\n");
+//   MPU6050_Calibrate(&hi2c1, &g_imu);
+//   Debug_Print("Calibration done. Starting balance loop.\r\n");
+
+   /* Balance PID – start conservative, tune via Bluetooth*/
+      PID_Init(&g_balance_pid,
+            /*Kp=*/40.0f,
+            /*Ki=*/0.0f,
+            /*Kd=*/6.0f,
+            /*integral_limit=*/200.0f,
+            /*output_limit=*/(float)MOTOR_PWM_MAX);
 
    Encoder_Start();   // starts TIM2 + TIM3 in encoder mode
 

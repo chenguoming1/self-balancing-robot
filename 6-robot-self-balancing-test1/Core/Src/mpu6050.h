@@ -23,7 +23,8 @@
 
 /* ── Complementary Filter Coefficient ───────────────────────────────── */
 // Tune alpha: closer to 1.0 → trust gyro more (less noise, more drift)
-#define COMP_FILTER_ALPHA  0.98f
+//#define COMP_FILTER_ALPHA  0.98f
+#define COMP_FILTER_ALPHA  0.995f
 
 typedef struct {
     float angle;        // Fused pitch angle (degrees) — the balance angle
