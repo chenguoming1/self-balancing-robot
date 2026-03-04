@@ -62,7 +62,7 @@ UART_HandleTypeDef huart2;
 /* ── Shared application state ───────────────────────────────────────── */
 static MPU6050_Data_t g_imu          = {0};
 static PID_t          g_balance_pid;
-static float          g_angle_setpoint = 1.3f;  // tune via BT: "A1.5\n"
+static float          g_angle_setpoint = 0.7f;  // tune via BT: "A1.5\n"
 static RingBuffer_t   g_bt_rb;
 static volatile float g_bt_speed_bias = 0.0f;
 
@@ -147,9 +147,9 @@ int main(void)
 
    /* Balance PID – start conservative, tune via Bluetooth*/
       PID_Init(&g_balance_pid,
-            /*Kp=*/40.0f,
-            /*Ki=*/0.0f,
-            /*Kd=*/6.0f,
+            /*Kp=*/50.0f,
+            /*Ki=*/0.5f,
+            /*Kd=*/2.5f,
             /*integral_limit=*/200.0f,
             /*output_limit=*/(float)MOTOR_PWM_MAX);
 

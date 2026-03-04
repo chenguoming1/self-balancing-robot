@@ -20,6 +20,7 @@
 /* ── Sensitivity Scales ──────────────────────────────────────────────── */
 #define ACCEL_SCALE_2G   16384.0f   // LSB/g   (±2g  range)
 #define GYRO_SCALE_250   131.0f     // LSB/°/s (±250°/s range)
+#define GYRO_SCALE_500   65.5f     // LSB/°/s (±500°/s range)
 
 /* ── Complementary Filter Coefficient ───────────────────────────────── */
 // Tune alpha: closer to 1.0 → trust gyro more (less noise, more drift)

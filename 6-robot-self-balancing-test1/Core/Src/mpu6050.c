@@ -41,8 +41,11 @@ bool MPU6050_Init(I2C_HandleTypeDef *hi2c)
 //    if (write_reg(hi2c, MPU6050_REG_CONFIG, 0x03) != HAL_OK) return false;//~44 Hz
     if (write_reg(hi2c, MPU6050_REG_CONFIG, 0x05) != HAL_OK) return false;//~10 Hz
 
-    // Gyro ±250°/s
+//    // Gyro ±250°/s
     if (write_reg(hi2c, MPU6050_REG_GYRO_CONFIG, 0x00) != HAL_OK) return false;
+
+    // Gyro ±500°/s
+//    if (write_reg(hi2c, MPU6050_REG_GYRO_CONFIG, 0x08) != HAL_OK) return false;
 
     // Accel ±2g
     if (write_reg(hi2c, MPU6050_REG_ACCEL_CONFIG, 0x00) != HAL_OK) return false;
@@ -60,12 +63,14 @@ void MPU6050_Update(I2C_HandleTypeDef *hi2c, MPU6050_Data_t *data, float dt)
 
     int16_t ax = (int16_t)((raw[0]  << 8) | raw[1]);
     int16_t az = (int16_t)((raw[4]  << 8) | raw[5]);
-    int16_t gy = (int16_t)((raw[8]  << 8) | raw[9]);
+//    int16_t gy = (int16_t)((raw[8]  << 8) | raw[9]);
+    // Use Gyro Y (pitch)
+    int16_t gy = (int16_t)((raw[10] << 8) | raw[11]);
 
     // Convert
     float ax_f = (float)ax / ACCEL_SCALE_2G;   // g
     float az_f = (float)az / ACCEL_SCALE_2G;   // g
-    data->gyro_rate = (float)gy / GYRO_SCALE_250;  // °/s
+    data->gyro_rate = -(float)gy / GYRO_SCALE_250;  // °/s
 
     // Accelerometer pitch angle (degrees)
     data->accel_angle = atan2f(ax_f, az_f) * (180.0f / (float)M_PI);

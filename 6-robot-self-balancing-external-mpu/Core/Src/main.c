@@ -62,7 +62,7 @@ UART_HandleTypeDef huart2;
 /* ── Shared application state ───────────────────────────────────────── */
 static MPU6050_Data_t g_imu          = {0};
 static PID_t          g_balance_pid;
-static float          g_angle_setpoint = 1.3f;  // tune via BT: "A1.5\n"
+static float          g_angle_setpoint = 0.0f;  // tune via BT: "A1.5\n"
 static RingBuffer_t   g_bt_rb;
 static volatile float g_bt_speed_bias = 0.0f;
 

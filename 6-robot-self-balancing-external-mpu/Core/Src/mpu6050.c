@@ -60,7 +60,8 @@ void MPU6050_Update(I2C_HandleTypeDef *hi2c, MPU6050_Data_t *data, float dt)
 
     int16_t ax = (int16_t)((raw[0]  << 8) | raw[1]);
     int16_t az = (int16_t)((raw[4]  << 8) | raw[5]);
-    int16_t gy = (int16_t)((raw[8]  << 8) | raw[9]);
+//    int16_t gy = (int16_t)((raw[8]  << 8) | raw[9]);
+    int16_t gy = (int16_t)((raw[10] << 8) | raw[11]);
 
     // Convert
     float ax_f = (float)ax / ACCEL_SCALE_2G;   // g
