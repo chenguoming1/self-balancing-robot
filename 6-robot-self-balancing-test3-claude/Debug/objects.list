@@ -1,6 +1,7 @@
 "./Core/Src/bt_command.o"
 "./Core/Src/debug.o"
 "./Core/Src/encoder.o"
+"./Core/Src/lpf.o"
 "./Core/Src/main.o"
 "./Core/Src/motor.o"
 "./Core/Src/mpu6050.o"

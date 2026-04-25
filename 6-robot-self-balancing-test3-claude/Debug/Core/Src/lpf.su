@@ -1,0 +1,2 @@
+../Core/Src/lpf.c:3:7:LPF_Update	40	static
+../Core/Src/lpf.c:10:6:LPF_Reset	16	static

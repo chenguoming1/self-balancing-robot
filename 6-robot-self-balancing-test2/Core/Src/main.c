@@ -209,14 +209,6 @@ int main(void)
    }
    Debug_Print("MPU6050 OK\r\n");
 
-   /* Calibrate — robot must be held STILL and UPRIGHT for ~1 second.
-      This zeroes the gyro bias and angle offset so that true upright
-      reads as exactly 0.0 degrees, regardless of MPU mounting angle.
-      After this, A setpoint of 0.0 means perfectly balanced.         */
-//   Debug_Print("Calibrating — hold robot upright and still...\r\n");
-//   MPU6050_Calibrate(&hi2c1, &g_imu);
-//   Debug_Print("Calibration done. Starting balance loop.\r\n");
-
    /* Arduino-FOC-balancer style cascade:
       velocity PID -> target pitch -> stabilisation PID -> motor PWM */
    PID_Init(&g_stab_pid,

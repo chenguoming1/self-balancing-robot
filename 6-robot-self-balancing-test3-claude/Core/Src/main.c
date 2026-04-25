@@ -583,7 +583,160 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* ═══════════════════════════════════════════════════════════════════════
+   TIM4 PERIOD ELAPSED IRQ  –  200 Hz CONTROL LOOP  (every 5 ms)
 
+   Cascade PID structure (ported from Arduino-FOC-balancer):
+
+     Outer loop (velocity):
+       avg_vel = (enc_left.delta + enc_right.delta) / 2   [counts/loop]
+       vel_error = avg_vel - lpf_throttle(throttle)
+       pitch_offset = lpf_pitch_cmd( pid_vel(vel_error) )   [degrees]
+
+     Inner loop (stabilisation):
+       voltage = pid_stb( pitch_offset - measured_pitch )   [→ PWM]
+
+     Steering (differential):
+       left  = voltage + lpf_steering(steering)
+       right = voltage - lpf_steering(steering)
+   ═══════════════════════════════════════════════════════════════════════ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance != TIM4) return;
+
+    Encoder_Update();
+    MPU6050_Update(&hi2c1, &g_imu, CONTROL_LOOP_DT);
+
+    if (!g_enabled) {
+        Motor_Stop();
+        return;
+    }
+
+    /* Outer loop: velocity → target pitch offset */
+    float avg_vel   = (float)(enc_left.delta + enc_right.delta) * 0.5f;
+    float vel_cmd   = LPF_Update(&g_lpf_throttle, g_throttle, CONTROL_LOOP_DT);
+    float vel_error = avg_vel - vel_cmd;
+    float pitch_offset = LPF_Update(&g_lpf_pitch_cmd,
+                                    PID_Compute(&g_pid_vel, 0.0f, vel_error, CONTROL_LOOP_DT),
+                                    CONTROL_LOOP_DT);
+
+    /* Inner loop: pitch error → PWM */
+    float target_pitch    = pitch_offset;
+    float voltage_control = PID_Compute(&g_pid_stb, target_pitch, g_imu.angle, CONTROL_LOOP_DT);
+
+    /* Steering differential */
+    float steer_adj = LPF_Update(&g_lpf_steering, g_steering, CONTROL_LOOP_DT);
+
+    int32_t left_pwm  = (int32_t)(voltage_control + steer_adj);
+    int32_t right_pwm = (int32_t)(voltage_control - steer_adj);
+    Motor_Set(left_pwm, right_pwm);
+
+    /* Expose to main loop for debug */
+    g_pid_stb_out  = voltage_control;
+    g_pid_vel_out  = pitch_offset;
+    g_target_pitch = target_pitch;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   USART2 RX COMPLETE IRQ  –  Bluetooth
+   ═══════════════════════════════════════════════════════════════════════ */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance != USART2) return;
+    rb_push(&g_bt_rb, s_uart_rx_byte);
+    HAL_UART_Receive_IT(&huart2, &s_uart_rx_byte, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BT COMMAND APPLICATION  (main loop only, never from ISR)
+
+   Protocol (ASCII + newline):
+     P<val>  – pid_stb Kp          (inner stabilisation)
+     I<val>  – pid_stb Ki
+     D<val>  – pid_stb Kd
+     V<val>  – pid_vel Kp          (outer velocity)
+     W<val>  – pid_vel Ki
+     F<val>  – throttle forward    (target encoder counts/loop)
+     B<val>  – throttle backward
+     L<val>  – steer left          (differential PWM)
+     R<val>  – steer right
+     S       – stop all
+     A<val>  – reserved (force target pitch, for debug)
+     E       – enable balancer
+     X       – disable balancer
+   ═══════════════════════════════════════════════════════════════════════ */
+static void apply_bt_command(const BT_Command_t *cmd)
+{
+    char buf[48];
+    switch (cmd->type) {
+        case BT_CMD_FORWARD:
+            g_throttle = cmd->value;
+            snprintf(buf, sizeof(buf), "Throttle +%.1f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_BACKWARD:
+            g_throttle = -cmd->value;
+            snprintf(buf, sizeof(buf), "Throttle -%.1f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_STEER_LEFT:
+            g_steering = -cmd->value;
+            snprintf(buf, sizeof(buf), "Steer L %.1f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_STEER_RIGHT:
+            g_steering = cmd->value;
+            snprintf(buf, sizeof(buf), "Steer R %.1f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_STOP:
+            g_throttle = 0.0f;
+            g_steering = 0.0f;
+            Debug_Print("Stop\r\n");
+            break;
+        case BT_CMD_ENABLE:
+            g_enabled = 1;
+            Debug_Print("Enabled\r\n");
+            break;
+        case BT_CMD_DISABLE:
+            g_enabled = 0;
+            Motor_Stop();
+            PID_Reset(&g_pid_stb);
+            PID_Reset(&g_pid_vel);
+            LPF_Reset(&g_lpf_pitch_cmd);
+            Debug_Print("Disabled\r\n");
+            break;
+        case BT_CMD_SET_KP:
+            g_pid_stb.Kp = cmd->value;
+            snprintf(buf, sizeof(buf), "stb Kp=%.3f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_SET_KI:
+            g_pid_stb.Ki = cmd->value;
+            PID_Reset(&g_pid_stb);
+            snprintf(buf, sizeof(buf), "stb Ki=%.3f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_SET_KD:
+            g_pid_stb.Kd = cmd->value;
+            snprintf(buf, sizeof(buf), "stb Kd=%.3f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_SET_VEL_KP:
+            g_pid_vel.Kp = cmd->value;
+            snprintf(buf, sizeof(buf), "vel Kp=%.3f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        case BT_CMD_SET_VEL_KI:
+            g_pid_vel.Ki = cmd->value;
+            PID_Reset(&g_pid_vel);
+            snprintf(buf, sizeof(buf), "vel Ki=%.3f\r\n", cmd->value);
+            Debug_Print(buf);
+            break;
+        default:
+            break;
+    }
+}
 /* USER CODE END 4 */
 
 /**
