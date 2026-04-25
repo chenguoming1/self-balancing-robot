@@ -56,8 +56,8 @@ typedef struct {
 #define STAB_KD_DEFAULT           (1.0f * PWM_PER_VOLT / RAD_TO_DEG)
 #define STAB_INTEGRAL_LIMIT        4.0f
 
-#define VEL_KP_DEFAULT             0.08f
-#define VEL_KI_DEFAULT             0.25f
+#define VEL_KP_DEFAULT             0.04f
+#define VEL_KI_DEFAULT             0.05f
 #define VEL_KD_DEFAULT             0.0f
 #define VEL_INTEGRAL_LIMIT        80.0f
 #define TARGET_PITCH_LIMIT_DEG    18.0f
@@ -72,12 +72,12 @@ typedef struct {
 /* Set the encoder signs so both wheels report forward motion as positive.
    If forward speed still looks wrong in debug, flip one of these signs. */
 #define LEFT_ENCODER_SIGN           1.0f
-#define RIGHT_ENCODER_SIGN         -1.0f
+#define RIGHT_ENCODER_SIGN          1.0f
 
 /* Backlash compensation for geared DC motors. Commands inside the entry
    zone are suppressed; larger commands get a kick past static slack. */
 #define MOTOR_COMMAND_ZERO_BAND_PWM   8.0f
-#define MOTOR_BACKLASH_DEADBAND_PWM  70.0f
+#define MOTOR_BACKLASH_DEADBAND_PWM  35.0f
 
 /* USER CODE END PD */
 
