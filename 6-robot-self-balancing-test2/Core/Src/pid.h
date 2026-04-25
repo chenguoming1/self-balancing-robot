@@ -1,15 +1,20 @@
 #ifndef PID_H
 #define PID_H
 
+#include <stdint.h>
+
 typedef struct {
     /* Tuning */
     float Kp;
     float Ki;
     float Kd;
+    float output_ramp;
 
     /* State */
     float integral;
     float prev_error;
+    float prev_output;
+    uint8_t initialized;
 
     /* Anti-windup clamp on integral term */
     float integral_limit;
@@ -24,7 +29,8 @@ typedef struct {
  */
 void PID_Init(PID_t *pid,
               float Kp, float Ki, float Kd,
-              float integral_limit, float output_limit);
+              float integral_limit, float output_limit,
+              float output_ramp);
 
 /**
  * Compute PID output for one step.

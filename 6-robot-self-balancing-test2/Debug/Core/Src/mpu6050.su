@@ -1,6 +1,4 @@
 ../Core/Src/mpu6050.c:7:26:write_reg	32	static
 ../Core/Src/mpu6050.c:14:26:read_regs	40	static
-../Core/Src/mpu6050.c:23:13:read_raw	40	static
-../Core/Src/mpu6050.c:40:6:MPU6050_Init	24	static
-../Core/Src/mpu6050.c:71:6:MPU6050_Calibrate	56	static
-../Core/Src/mpu6050.c:111:6:MPU6050_Update	48	static
+../Core/Src/mpu6050.c:25:6:MPU6050_Init	24	static
+../Core/Src/mpu6050.c:56:6:MPU6050_Update	64	static

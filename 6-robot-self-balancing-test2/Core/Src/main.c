@@ -61,10 +61,23 @@ typedef struct {
 #define VEL_KD_DEFAULT             0.0f
 #define VEL_INTEGRAL_LIMIT        80.0f
 #define TARGET_PITCH_LIMIT_DEG    18.0f
+#define STAB_OUTPUT_RAMP_PWM_S  30000.0f
+#define VEL_OUTPUT_RAMP_DEG_S    120.0f
 
 #define LPF_PITCH_TF_S             0.07f
 #define LPF_THROTTLE_TF_S          0.50f
 #define LPF_STEERING_TF_S          0.10f
+#define LPF_VELOCITY_TF_S          0.04f
+
+/* Set the encoder signs so both wheels report forward motion as positive.
+   If forward speed still looks wrong in debug, flip one of these signs. */
+#define LEFT_ENCODER_SIGN           1.0f
+#define RIGHT_ENCODER_SIGN         -1.0f
+
+/* Backlash compensation for geared DC motors. Commands inside the entry
+   zone are suppressed; larger commands get a kick past static slack. */
+#define MOTOR_COMMAND_ZERO_BAND_PWM   8.0f
+#define MOTOR_BACKLASH_DEADBAND_PWM  70.0f
 
 /* USER CODE END PD */
 
@@ -91,6 +104,7 @@ static PID_t           g_vel_pid;
 static LowPassFilter_t g_pitch_cmd_lpf;
 static LowPassFilter_t g_throttle_lpf;
 static LowPassFilter_t g_steering_lpf;
+static LowPassFilter_t g_velocity_lpf;
 static RingBuffer_t    g_bt_rb;
 static float           g_balance_trim_deg = 0.7f;
 static volatile float  g_target_pitch_deg = 0.0f;
@@ -119,6 +133,7 @@ static void MX_TIM3_Init(void);
 static void apply_bt_command(const BT_Command_t *cmd);
 static void low_pass_init(LowPassFilter_t *filter, float tf);
 static float low_pass_apply(LowPassFilter_t *filter, float input, float dt);
+static float compensate_motor_pwm(float command_pwm);
 static void reset_control_state(void);
 /* USER CODE END PFP */
 
@@ -149,6 +164,26 @@ static float low_pass_apply(LowPassFilter_t *filter, float input, float dt)
     return filter->state;
 }
 
+static float compensate_motor_pwm(float command_pwm)
+{
+    float magnitude = fabsf(command_pwm);
+
+    if (magnitude <= MOTOR_COMMAND_ZERO_BAND_PWM) {
+        return 0.0f;
+    }
+
+    if (magnitude >= (float)MOTOR_PWM_MAX) {
+        return (command_pwm > 0.0f) ? (float)MOTOR_PWM_MAX : -(float)MOTOR_PWM_MAX;
+    }
+
+    magnitude = MOTOR_BACKLASH_DEADBAND_PWM +
+                ((magnitude - MOTOR_COMMAND_ZERO_BAND_PWM) *
+                 ((float)MOTOR_PWM_MAX - MOTOR_BACKLASH_DEADBAND_PWM) /
+                 ((float)MOTOR_PWM_MAX - MOTOR_COMMAND_ZERO_BAND_PWM));
+
+    return (command_pwm > 0.0f) ? magnitude : -magnitude;
+}
+
 static void reset_control_state(void)
 {
     PID_Reset(&g_stab_pid);
@@ -156,6 +191,7 @@ static void reset_control_state(void)
     low_pass_init(&g_pitch_cmd_lpf, LPF_PITCH_TF_S);
     low_pass_init(&g_throttle_lpf, LPF_THROTTLE_TF_S);
     low_pass_init(&g_steering_lpf, LPF_STEERING_TF_S);
+    low_pass_init(&g_velocity_lpf, LPF_VELOCITY_TF_S);
     g_target_pitch_deg = g_balance_trim_deg;
     g_pid_output = 0.0f;
     g_velocity_meas = 0.0f;
@@ -216,13 +252,15 @@ int main(void)
             STAB_KI_DEFAULT,
             STAB_KD_DEFAULT,
             STAB_INTEGRAL_LIMIT,
-            (float)MOTOR_PWM_MAX);
+            (float)MOTOR_PWM_MAX,
+            STAB_OUTPUT_RAMP_PWM_S);
    PID_Init(&g_vel_pid,
             VEL_KP_DEFAULT,
             VEL_KI_DEFAULT,
             VEL_KD_DEFAULT,
             VEL_INTEGRAL_LIMIT,
-            TARGET_PITCH_LIMIT_DEG);
+            TARGET_PITCH_LIMIT_DEG,
+            VEL_OUTPUT_RAMP_DEG_S);
    reset_control_state();
 
    Encoder_Start();   // starts TIM2 + TIM3 in encoder mode
@@ -678,7 +716,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     /* Arduino reference logic:
        filtered throttle -> velocity PID -> filtered target pitch ->
        stabilisation PID -> motor PWM, plus filtered steering trim. */
-    g_velocity_meas = 0.5f * (float)(enc_left.delta + enc_right.delta);
+    float left_velocity = LEFT_ENCODER_SIGN * ((float)enc_left.delta / CONTROL_LOOP_DT);
+    float right_velocity = RIGHT_ENCODER_SIGN * ((float)enc_right.delta / CONTROL_LOOP_DT);
+    g_velocity_meas = low_pass_apply(&g_velocity_lpf,
+                                     0.5f * (left_velocity + right_velocity),
+                                     CONTROL_LOOP_DT);
 
     float throttle_cmd = low_pass_apply(&g_throttle_lpf, g_throttle_cmd, CONTROL_LOOP_DT);
     float target_pitch = PID_Compute(&g_vel_pid,
@@ -693,12 +735,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
                                   g_imu.angle,
                                   CONTROL_LOOP_DT);
     float steering_pwm = low_pass_apply(&g_steering_lpf, g_steering_cmd, CONTROL_LOOP_DT);
+    float left_pwm = compensate_motor_pwm(drive_pwm + steering_pwm);
+    float right_pwm = compensate_motor_pwm(drive_pwm - steering_pwm);
 
     g_target_pitch_deg = target_pitch;
     g_pid_output = drive_pwm;
 
-    Motor_Set((int32_t)(drive_pwm + steering_pwm),
-              (int32_t)(drive_pwm - steering_pwm));
+    Motor_Set((int32_t)left_pwm,
+              (int32_t)right_pwm);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
