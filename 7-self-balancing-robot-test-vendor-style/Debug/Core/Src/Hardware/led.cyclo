@@ -1,0 +1,2 @@
+../Core/Src/Hardware/led.c:4:6:LED_Init	1
+../Core/Src/Hardware/led.c:9:6:Led_Flash	3

@@ -1,0 +1,80 @@
+STM32CubeIDE Project: F103Balance
+Converted from: Keil Standard Library (SPL) -> STM32 HAL
+
+=== REQUIRED INCLUDE PATHS (add in CubeIDE project settings) ===
+Project > Properties > C/C++ Build > Settings > MCU GCC Compiler > Include paths:
+  ../Core/Inc/Hardware
+  ../Drivers/eMPL
+
+=== KEY ARCHITECTURAL CHANGES ===
+
+1. I2C (MPU6050):
+   - Original: Software bit-bang on PB6/PB7
+   - HAL: Hardware I2C1 on PB6(SCL)/PB7(SDA) at 400 kHz
+   - All MPU_Write_Len/MPU_Read_Len now use HAL_I2C_Mem_Write/Read
+
+2. OLED Display:
+   - Still software bit-bang on PB8(SCL)/PB9(SDA)
+   - Macros updated to use HAL_GPIO_WritePin
+
+3. Delay:
+   - delay_ms() -> HAL_Delay()
+   - delay_us() -> DWT cycle counter (enabled in main() USER CODE 2)
+
+4. Printf/UART1:
+   - __io_putchar() redirects to HAL_UART_Transmit(&huart1)
+   - No Keil microlib needed
+
+5. Control Loop (MPU6050 interrupt):
+   - Original: EXTI9_5_IRQHandler() in control.c
+   - HAL: HAL_GPIO_EXTI_Callback() in main.c -> MPU6050_Control_IRQ() in control.c
+
+6. Encoder Timers:
+   - TIM2/TIM3 configured in encoder mode by CubeIDE MX_TIM2/TIM3_Init
+   - Encoder_Start() calls HAL_TIM_Encoder_Start for both
+   - Read_Encoder() still uses direct CNT register access (same as SPL)
+
+7. Motor PWM:
+   - TIM1 CH1 (PA8) = PWMA, CH4 (PA11) = PWMB
+   - HAL_TIM_PWM_Start() called in main() USER CODE 2
+   - Direction via bit-banding (PBout) on PB12-PB15
+
+8. Timer4 (SR04 ultrasonic):
+   - NOT in .ioc - initialized directly in Timer4_Init()
+   - SR04 ECHO (PB11) uses EXTI15_10 interrupt
+
+9. Bluetooth UART2:
+   - Interrupt-driven receive via HAL_UART_Receive_IT
+   - Baud rate reconfigured at runtime by uart2_init()
+
+10. PS2 / Tracking GPIO:
+    - PA4, PA5, PB3, PB4 initialized in PS2_Init() / Tracking_Init()
+    - Not in .ioc file
+
+=== MOTOR PIN MAPPING ===
+PWMA = TIM1_CH1 = PA8   (Motor A speed)
+PWMB = TIM1_CH4 = PA11  (Motor B speed)
+AIN1 = PB14             (Motor A direction 1)
+AIN2 = PB15             (Motor A direction 2)
+BIN1 = PB13             (Motor B direction 1)
+BIN2 = PB12             (Motor B direction 2)
+
+Note: CubeIDE .ioc labels AIN1/AIN2 on PB12/PB13 - this is just a label
+difference. The bit-banding macros in motor.h use the SPL pin assignments
+which match the original hardware wiring.
+
+=== PID TUNING CONSTANTS (motor type: GB37520) ===
+BLC_KP = 240    (balance P gain)
+BLC_KD = 0.75   (balance D gain)
+SPD_KP = 69     (velocity P gain)
+SPD_KI = 0.345  (velocity I gain)
+TURN_KP = -40   (turn P gain)
+TURN_KD = -0.6  (turn D gain)
+Mechanical_angle = 0 (upright balance angle - tune this first!)
+
+=== CONTROL MODE ===
+97 = Obstacle avoidance (SR04 ultrasonic)
+98 = Bluetooth control (default, UART2 at 9600 baud)
+99 = Line tracking
+100 = PS2 wireless gamepad
+KEY button (PC15) cycles through modes

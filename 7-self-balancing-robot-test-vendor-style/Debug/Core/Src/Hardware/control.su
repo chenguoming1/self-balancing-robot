@@ -1,0 +1,6 @@
+../Core/Src/Hardware/control.c:30:6:MPU6050_Control_IRQ	16	static
+../Core/Src/Hardware/control.c:69:5:balance_UP	40	static
+../Core/Src/Hardware/control.c:76:5:velocity	32	static
+../Core/Src/Hardware/control.c:97:5:Turn_UP	24	static
+../Core/Src/Hardware/control.c:102:6:Tracking	4	static
+../Core/Src/Hardware/control.c:111:6:Get_RC	24	static

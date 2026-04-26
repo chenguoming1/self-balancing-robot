@@ -1,0 +1,6 @@
+../Core/Src/Hardware/usart2.c:8:6:uart2_init	1
+../Core/Src/Hardware/usart2.c:23:6:USART2_RxCallback	1
+../Core/Src/Hardware/usart2.c:29:6:BluetoothCMD	10
+../Core/Src/Hardware/usart2.c:45:6:Uart2SendByte	1
+../Core/Src/Hardware/usart2.c:50:6:Uart2SendBuf	1
+../Core/Src/Hardware/usart2.c:55:6:Uart2SendStr	1

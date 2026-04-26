@@ -51,13 +51,13 @@ typedef struct {
 #define RAD_TO_DEG                (180.0f / (float)M_PI)
 #define PWM_PER_VOLT              ((float)MOTOR_PWM_MAX / STAB_SUPPLY_VOLTAGE)
 
-#define STAB_KP_DEFAULT           (30.0f * PWM_PER_VOLT / RAD_TO_DEG)
+#define STAB_KP_DEFAULT           (27.0f * PWM_PER_VOLT / RAD_TO_DEG)
 #define STAB_KI_DEFAULT           (100.0f * PWM_PER_VOLT / RAD_TO_DEG)
-#define STAB_KD_DEFAULT           (1.0f * PWM_PER_VOLT / RAD_TO_DEG)
+#define STAB_KD_DEFAULT           (1.3f * PWM_PER_VOLT / RAD_TO_DEG)
 #define STAB_INTEGRAL_LIMIT        4.0f
 
 #define VEL_KP_DEFAULT             0.04f
-#define VEL_KI_DEFAULT             0.05f
+#define VEL_KI_DEFAULT             0.0f
 #define VEL_KD_DEFAULT             0.0f
 #define VEL_INTEGRAL_LIMIT        80.0f
 #define TARGET_PITCH_LIMIT_DEG    18.0f
@@ -68,6 +68,7 @@ typedef struct {
 #define LPF_THROTTLE_TF_S          0.50f
 #define LPF_STEERING_TF_S          0.10f
 #define LPF_VELOCITY_TF_S          0.04f
+#define VELOCITY_DEADBAND_CPS     80.0f
 
 /* Set the encoder signs so both wheels report forward motion as positive.
    If forward speed still looks wrong in debug, flip one of these signs. */
@@ -77,7 +78,7 @@ typedef struct {
 /* Backlash compensation for geared DC motors. Commands inside the entry
    zone are suppressed; larger commands get a kick past static slack. */
 #define MOTOR_COMMAND_ZERO_BAND_PWM   8.0f
-#define MOTOR_BACKLASH_DEADBAND_PWM  35.0f
+#define MOTOR_BACKLASH_DEADBAND_PWM  25.0f
 
 /* USER CODE END PD */
 
@@ -721,6 +722,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     g_velocity_meas = low_pass_apply(&g_velocity_lpf,
                                      0.5f * (left_velocity + right_velocity),
                                      CONTROL_LOOP_DT);
+    if (fabsf(g_velocity_meas) < VELOCITY_DEADBAND_CPS) {
+        g_velocity_meas = 0.0f;
+    }
 
     float throttle_cmd = low_pass_apply(&g_throttle_lpf, g_throttle_cmd, CONTROL_LOOP_DT);
     float target_pitch = PID_Compute(&g_vel_pid,

@@ -1,0 +1,15 @@
+../Core/Inc/Hardware/robot_hal.h:54:20:delay_us	2
+../Core/Src/Hardware/PS2.c:16:6:PS2_Init	1
+../Core/Src/Hardware/PS2.c:41:6:PS2_Cmd	4
+../Core/Src/Hardware/PS2.c:55:4:PS2_RedLight	1
+../Core/Src/Hardware/PS2.c:64:6:PS2_ReadData	4
+../Core/Src/Hardware/PS2.c:83:4:PS2_DataKey	3
+../Core/Src/Hardware/PS2.c:96:4:PS2_AnologData	1
+../Core/Src/Hardware/PS2.c:101:6:PS2_ClearData	2
+../Core/Src/Hardware/PS2.c:107:6:PS2_Vibration	1
+../Core/Src/Hardware/PS2.c:116:13:PS2_ShortPoll	1
+../Core/Src/Hardware/PS2.c:124:6:PS2_EnterConfing	1
+../Core/Src/Hardware/PS2.c:133:6:PS2_TurnOnAnalogMode	1
+../Core/Src/Hardware/PS2.c:142:6:PS2_VibrationMode	1
+../Core/Src/Hardware/PS2.c:150:6:PS2_ExitConfing	1
+../Core/Src/Hardware/PS2.c:159:6:PS2_SetInit	1

@@ -1,0 +1,3 @@
+../Core/Src/Hardware/adc.c:6:6:Adc_Init	1
+../Core/Src/Hardware/adc.c:13:5:Get_Adc	1
+../Core/Src/Hardware/adc.c:27:7:Get_battery_volt	1

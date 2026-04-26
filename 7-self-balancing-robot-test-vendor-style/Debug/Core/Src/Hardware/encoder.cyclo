@@ -1,0 +1,2 @@
+../Core/Src/Hardware/encoder.c:6:6:Encoder_Start	1
+../Core/Src/Hardware/encoder.c:15:5:Read_Encoder	3

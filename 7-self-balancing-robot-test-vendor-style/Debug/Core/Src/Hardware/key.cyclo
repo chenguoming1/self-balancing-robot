@@ -1,0 +1,2 @@
+../Core/Src/Hardware/key.c:4:6:KEY_Init	1
+../Core/Src/Hardware/key.c:9:4:KEY_Press	3
