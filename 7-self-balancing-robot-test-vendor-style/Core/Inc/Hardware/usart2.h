@@ -6,6 +6,9 @@ extern u8 Fore, Back, Left, Right;
 
 void uart2_init(u32 bound);
 void USART2_RxCallback(void);
+void Bluetooth_Process(void);
+void Bluetooth_DebugTask(void);
+u8 Bluetooth_ManualControlActive(void);
 void BluetoothCMD(int cmd);
 void Uart2SendByte(char byte);
 void Uart2SendBuf(char *buf, u16 len);

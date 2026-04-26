@@ -1,4 +1,3 @@
-../Core/Inc/Hardware/robot_hal.h:61:20:delay_ms	1
 ../Core/Src/Hardware/oled.c:45:6:OLED_IIC_Start	1
 ../Core/Src/Hardware/oled.c:57:6:OLED_IIC_Stop	1
 ../Core/Src/Hardware/oled.c:65:6:OLED_IIC_Wait_Ack	1
@@ -6,8 +5,8 @@
 ../Core/Src/Hardware/oled.c:96:6:OLED_Write_IIC_Command	1
 ../Core/Src/Hardware/oled.c:110:6:OLED_Write_IIC_Data	1
 ../Core/Src/Hardware/oled.c:121:6:OLED_WR_Byte	2
-../Core/Src/Hardware/oled.c:154:6:Delay_50ms	3
-../Core/Src/Hardware/oled.c:161:6:Delay_1ms	3
+../Core/Src/Hardware/oled.c:154:6:Delay_50ms	1
+../Core/Src/Hardware/oled.c:161:6:Delay_1ms	1
 ../Core/Src/Hardware/oled.c:172:7:OLED_Set_Pos	1
 ../Core/Src/Hardware/oled.c:178:6:OLED_Display_On	1
 ../Core/Src/Hardware/oled.c:185:6:OLED_Display_Off	1
@@ -15,15 +14,15 @@
 ../Core/Src/Hardware/oled.c:203:6:OLED_On	3
 ../Core/Src/Hardware/oled.c:219:6:OLED_ShowChar	6
 ../Core/Src/Hardware/oled.c:241:5:oled_pow	2
-../Core/Src/Hardware/oled.c:253:6:OLED_ShowNumber	5
+../Core/Src/Hardware/oled.c:253:6:OLED_ShowNumber	6
 ../Core/Src/Hardware/oled.c:273:6:OLED_ShowString	3
 ../Core/Src/Hardware/oled.c:282:6:OLED_Float	5
 ../Core/Src/Hardware/oled.c:326:7:OLED_Float2	3
+../Core/Src/Hardware/oled.c:431:6:OLED_Num_write	2
+../Core/Src/Hardware/oled.c:412:6:OLED_Num4	1
+../Core/Src/Hardware/oled.c:440:6:OLED_fuhao_write	2
 ../Core/Src/Hardware/oled.c:361:6:OLED_Num2	2
 ../Core/Src/Hardware/oled.c:385:6:OLED_Num3	2
-../Core/Src/Hardware/oled.c:412:6:OLED_Num4	2
-../Core/Src/Hardware/oled.c:431:6:OLED_Num_write	2
-../Core/Src/Hardware/oled.c:440:6:OLED_fuhao_write	2
 ../Core/Src/Hardware/oled.c:450:6:OLED_Num5	1
 ../Core/Src/Hardware/oled.c:466:6:OLED_Init	1
 ../Core/Src/Hardware/oled.c:510:6:oled_first_show	1

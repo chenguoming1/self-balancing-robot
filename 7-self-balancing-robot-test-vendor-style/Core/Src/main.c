@@ -43,6 +43,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define DEBUG_MIRROR_TO_BLUETOOTH 1
+#define BLUETOOTH_TELEMETRY 0
 
 /* USER CODE END PD */
 
@@ -95,6 +97,39 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#if BLUETOOTH_TELEMETRY
+static char *append_str(char *dst, const char *src)
+{
+  while (*src) {
+    *dst++ = *src++;
+  }
+  return dst;
+}
+
+static char *append_int(char *dst, int value)
+{
+  char tmp[16];
+  int i = 0;
+  unsigned int mag;
+
+  if (value < 0) {
+    *dst++ = '-';
+    mag = (unsigned int)(-value);
+  } else {
+    mag = (unsigned int)value;
+  }
+
+  do {
+    tmp[i++] = (char)('0' + (mag % 10U));
+    mag /= 10U;
+  } while (mag > 0U);
+
+  while (i > 0) {
+    *dst++ = tmp[--i];
+  }
+  return dst;
+}
+#endif
 
 /* USER CODE END 0 */
 
@@ -178,6 +213,36 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    Bluetooth_Process();
+    Bluetooth_DebugTask();
+
+#if BLUETOOTH_TELEMETRY
+    static uint32_t last_log_ms = 0;
+    if ((HAL_GetTick() - last_log_ms) >= 200U) {
+      char log_buf[96];
+      char *p = log_buf;
+      int pitch_centi = (int)(pitch * 100.0f);
+      last_log_ms = HAL_GetTick();
+      p = append_str(p, "mode=");
+      p = append_int(p, (int)CTRL_MODE);
+      p = append_str(p, " pitch_centi=");
+      p = append_int(p, pitch_centi);
+      p = append_str(p, " gy=");
+      p = append_int(p, gyroy);
+      p = append_str(p, " encL=");
+      p = append_int(p, Encoder_Left);
+      p = append_str(p, " encR=");
+      p = append_int(p, Encoder_Right);
+      p = append_str(p, " m1=");
+      p = append_int(p, Moto1);
+      p = append_str(p, " m2=");
+      p = append_int(p, Moto2);
+      p = append_str(p, "\r\n");
+      *p = '\0';
+      Uart2SendStr(log_buf);
+    }
+#endif
+
     if (Mode_Change) {
       Mode_Change = 0;
       Mode_Init();
@@ -549,7 +614,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -638,6 +703,9 @@ static void MX_GPIO_Init(void)
 int __io_putchar(int ch)
 {
   HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 10);
+#if DEBUG_MIRROR_TO_BLUETOOTH
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 10);
+#endif
   return ch;
 }
 

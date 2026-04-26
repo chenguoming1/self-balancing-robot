@@ -1,2 +1,2 @@
-../Core/Src/Hardware/encoder.c:6:6:Encoder_Start	8	static
-../Core/Src/Hardware/encoder.c:15:5:Read_Encoder	24	static
+../Core/Src/Hardware/encoder.c:6:6:Encoder_Start	16	static
+../Core/Src/Hardware/encoder.c:15:5:Read_Encoder	0	static

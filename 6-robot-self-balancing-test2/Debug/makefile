@@ -34,34 +34,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := 6-robot-self-balancing-test2
+BUILD_ARTIFACT_NAME := 6-robot-self-balancing-cascade-pid
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-6-robot-self-balancing-test2.elf \
+6-robot-self-balancing-cascade-pid.elf \
 
 MAP_FILES += \
-6-robot-self-balancing-test2.map \
+6-robot-self-balancing-cascade-pid.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-6-robot-self-balancing-test2.list \
+6-robot-self-balancing-cascade-pid.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: 6-robot-self-balancing-test2.elf secondary-outputs
+main-build: 6-robot-self-balancing-cascade-pid.elf secondary-outputs
 
 # Tool invocations
-6-robot-self-balancing-test2.elf 6-robot-self-balancing-test2.map: $(OBJS) $(USER_OBJS) /Users/aungbonaing/develop/STM32CubeIDE/self-balancing-robot/6-robot-self-balancing-test2/STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "6-robot-self-balancing-test2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/Users/aungbonaing/develop/STM32CubeIDE/self-balancing-robot/6-robot-self-balancing-test2/STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="6-robot-self-balancing-test2.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+6-robot-self-balancing-cascade-pid.elf 6-robot-self-balancing-cascade-pid.map: $(OBJS) $(USER_OBJS) /Users/aungbonaing/develop/STM32CubeIDE/self-balancing-robot/6-robot-self-balancing-test2/STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "6-robot-self-balancing-cascade-pid.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/Users/aungbonaing/develop/STM32CubeIDE/self-balancing-robot/6-robot-self-balancing-test2/STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="6-robot-self-balancing-cascade-pid.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -70,14 +70,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-6-robot-self-balancing-test2.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "6-robot-self-balancing-test2.list"
+6-robot-self-balancing-cascade-pid.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "6-robot-self-balancing-cascade-pid.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) 6-robot-self-balancing-test2.elf 6-robot-self-balancing-test2.list 6-robot-self-balancing-test2.map default.size.stdout
+	-$(RM) 6-robot-self-balancing-cascade-pid.elf 6-robot-self-balancing-cascade-pid.list 6-robot-self-balancing-cascade-pid.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)

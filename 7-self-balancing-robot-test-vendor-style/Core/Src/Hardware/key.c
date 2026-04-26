@@ -16,5 +16,6 @@ u8 KEY_Press(int Ticks)
         }
         return 0;
     }
+    Tick = 0;
     return 0;
 }

@@ -1,2 +1,2 @@
-../Core/Src/Hardware/led.c:4:6:LED_Init	4	static
-../Core/Src/Hardware/led.c:9:6:Led_Flash	16	static
+../Core/Src/Hardware/led.c:4:6:LED_Init	0	static
+../Core/Src/Hardware/led.c:9:6:Led_Flash	0	static

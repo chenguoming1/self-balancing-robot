@@ -12,6 +12,9 @@
 
 #define SPEED_Y 100   /* max forward/backward speed */
 #define SPEED_Z 80    /* max turn speed */
+#define LEFT_ENCODER_SIGN  (1)
+#define RIGHT_ENCODER_SIGN (-1)
+#define BALANCE_OUTPUT_SIGN (1)
 
 int   Balance_Pwm, Velocity_Pwm, Turn_Pwm, Turn_Kp;
 
@@ -25,6 +28,9 @@ float velocity_KP   = SPD_KP;
 float velocity_KI   = SPD_KI;
 float Turn_Kd       = TURN_KD;
 float Turn_KP       = TURN_KP;
+static u8 Motor_Armed = 0;
+static float velocity_encoder = 0.0f;
+static float velocity_integral = 0.0f;
 
 /* Called from HAL_GPIO_EXTI_Callback when MPU6050 INT fires (PB5 falling) */
 void MPU6050_Control_IRQ(void)
@@ -33,13 +39,33 @@ void MPU6050_Control_IRQ(void)
 
     mpu_dmp_get_data(&pitch, &roll, &yaw);
     MPU_Get_Gyroscope(&gyrox, &gyroy, &gyroz);
-    Encoder_Left  =  Read_Encoder(2);
-    Encoder_Right = -Read_Encoder(3);
+    /* Match the working robot convention: both wheels should report the
+     * same sign for the same physical travel direction. If this sign is
+     * wrong, the velocity loop becomes positive feedback and the motors run
+     * away as soon as they are armed.
+     */
+    Encoder_Left  = LEFT_ENCODER_SIGN * Read_Encoder(2);
+    Encoder_Right = RIGHT_ENCODER_SIGN * Read_Encoder(3);
     Led_Flash(100);
 
     if (++Voltage_Counter == 20) {
         Voltage_Counter = 0;
         Voltage = Get_battery_volt();
+    }
+
+    /* Safety latch:
+     * Boot with motor output disabled. Hold KEY long enough to arm.
+     * This lets us validate IMU/encoder direction without runaway wheels.
+     */
+    if (!Motor_Armed) {
+        if (KEY_Press(200)) {
+            Motor_Armed = 1;
+        } else {
+            Moto1 = 0;
+            Moto2 = 0;
+            Set_Pwm(0, 0);
+            return;
+        }
     }
 
     if (KEY_Press(100)) {
@@ -69,27 +95,28 @@ void MPU6050_Control_IRQ(void)
 int balance_UP(float Angle, float Mechanical_balance, float Gyro)
 {
     float Bias    = Angle - Mechanical_balance;
-    int   balance = (int)(balance_UP_KP * Bias + balance_UP_KD * Gyro);
+    int   balance = BALANCE_OUTPUT_SIGN *
+                    (int)(balance_UP_KP * Bias + balance_UP_KD * Gyro);
     return balance;
 }
 
-int velocity(int encoder_left, int encoder_right, int gyro_Z)
+int velocity(int encoder_left, int encoder_right, int target_speed)
 {
-    static float Velocity, Encoder_Least, Encoder;
-    static float Encoder_Integral;
+    float Velocity;
+    float Encoder_Least;
 
-    Encoder_Least     = (float)(Encoder_Left + Encoder_Right);
-    Encoder          *= 0.8f;
-    Encoder          += Encoder_Least * 0.2f;
-    Encoder_Integral += Encoder;
-    Encoder_Integral -= (float)gyro_Z;
+    Encoder_Least     = (float)(encoder_left + encoder_right);
+    velocity_encoder *= 0.8f;
+    velocity_encoder += Encoder_Least * 0.2f;
+    velocity_integral += velocity_encoder;
+    velocity_integral -= (float)target_speed;
 
-    if (Encoder_Integral >  10000.0f) Encoder_Integral =  10000.0f;
-    if (Encoder_Integral < -10000.0f) Encoder_Integral = -10000.0f;
+    if (velocity_integral >  10000.0f) velocity_integral =  10000.0f;
+    if (velocity_integral < -10000.0f) velocity_integral = -10000.0f;
 
-    Velocity = Encoder * velocity_KP + Encoder_Integral * velocity_KI;
+    Velocity = velocity_encoder * velocity_KP + velocity_integral * velocity_KI;
 
-    if (pitch < -40.0f || pitch > 40.0f) Encoder_Integral = 0.0f;
+    if (pitch < -40.0f || pitch > 40.0f) velocity_integral = 0.0f;
 
     return (int)Velocity;
 }
@@ -125,14 +152,18 @@ void Get_RC(void)
             break;
 
         case 98:
-            if (!Fore && !Back) Target_Speed = 0;
+            if (Bluetooth_ManualControlActive()) {
+                break;
+            }
+
+            if (!Fore && !Back) Target_Speed = 0.0f;
             if (Fore)  Target_Speed--;
             if (Back)  Target_Speed++;
-            if (!Left && !Right) Turn_Speed = 0;
-            if (Left)  Turn_Speed -= 30;
-            if (Right) Turn_Speed += 30;
-            if (!Left && !Right) Turn_Kd = -0.6f;
-            else                 Turn_Kd =  0.0f;
+            if (!Left && !Right) Turn_Speed = 0.0f;
+            if (Left)  Turn_Speed -= 30.0f;
+            if (Right) Turn_Speed += 30.0f;
+            if (!Left && !Right) Turn_Kd = TURN_KD;
+            else                 Turn_Kd = 0.0f;
             break;
 
         case 99:
@@ -161,4 +192,12 @@ void Get_RC(void)
             }
             break;
     }
+}
+
+void Control_ResetState(void)
+{
+    velocity_encoder = 0.0f;
+    velocity_integral = 0.0f;
+    Target_Speed = 0.0f;
+    Turn_Speed = 0.0f;
 }
