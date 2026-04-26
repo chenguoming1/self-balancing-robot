@@ -15,6 +15,8 @@
 #define LEFT_ENCODER_SIGN  (1)
 #define RIGHT_ENCODER_SIGN (-1)
 #define BALANCE_OUTPUT_SIGN (1)
+#define BT_RC_DRIVE_SPEED 15.0f
+#define BT_RC_TURN_SPEED  10.0f
 
 int   Balance_Pwm, Velocity_Pwm, Turn_Pwm, Turn_Kp;
 
@@ -156,12 +158,14 @@ void Get_RC(void)
                 break;
             }
 
-            if (!Fore && !Back) Target_Speed = 0.0f;
-            if (Fore)  Target_Speed--;
-            if (Back)  Target_Speed++;
-            if (!Left && !Right) Turn_Speed = 0.0f;
-            if (Left)  Turn_Speed -= 30.0f;
-            if (Right) Turn_Speed += 30.0f;
+            if (Fore && !Back)      Target_Speed = -BT_RC_DRIVE_SPEED;
+            else if (Back && !Fore) Target_Speed =  BT_RC_DRIVE_SPEED;
+            else                    Target_Speed =  0.0f;
+
+            if (Left && !Right)      Turn_Speed = -BT_RC_TURN_SPEED;
+            else if (Right && !Left) Turn_Speed =  BT_RC_TURN_SPEED;
+            else                     Turn_Speed =  0.0f;
+
             if (!Left && !Right) Turn_Kd = TURN_KD;
             else                 Turn_Kd = 0.0f;
             break;

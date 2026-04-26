@@ -1,7 +1,7 @@
-../Core/Src/Hardware/control.c:95:5:balance_UP	1
-../Core/Src/Hardware/control.c:103:5:velocity	5
-../Core/Src/Hardware/control.c:124:5:Turn_UP	1
-../Core/Src/Hardware/control.c:129:6:Tracking	1
-../Core/Src/Hardware/control.c:138:6:Get_RC	26
-../Core/Src/Hardware/control.c:36:6:MPU6050_Control_IRQ	9
-../Core/Src/Hardware/control.c:197:6:Control_ResetState	1
+../Core/Src/Hardware/control.c:97:5:balance_UP	1
+../Core/Src/Hardware/control.c:105:5:velocity	5
+../Core/Src/Hardware/control.c:126:5:Turn_UP	1
+../Core/Src/Hardware/control.c:131:6:Tracking	1
+../Core/Src/Hardware/control.c:140:6:Get_RC	26
+../Core/Src/Hardware/control.c:38:6:MPU6050_Control_IRQ	9
+../Core/Src/Hardware/control.c:201:6:Control_ResetState	1
