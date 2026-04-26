@@ -698,8 +698,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     /* Step 1 – Snapshot encoder deltas (hardware counted, we just diff) */
     Encoder_Update();
 
-    /* Step 2 – Read IMU and update complementary filter
-                ~300 µs at 400 kHz I2C; well within the 5 ms budget       */
+    /* Step 2 – Read IMU and refresh DMP pitch/roll/yaw plus raw gyro
+                and accel debug signals for the balance loop.             */
     MPU6050_Update(&hi2c1, &g_imu, CONTROL_LOOP_DT);
 
     if (fabsf(g_imu.angle) >= FALL_ANGLE_DEG) {

@@ -1,3 +1,2 @@
-../Core/Src/motor.c:5:13:set_motor	14
-../Core/Src/motor.c:35:6:Motor_Set	1
+../Core/Src/motor.c:35:6:Motor_Set	9
 ../Core/Src/motor.c:50:6:Motor_Stop	1

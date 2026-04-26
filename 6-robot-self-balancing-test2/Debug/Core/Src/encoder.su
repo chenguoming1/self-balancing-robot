@@ -1,2 +1,2 @@
-../Core/Src/encoder.c:7:6:Encoder_Start	8	static
-../Core/Src/encoder.c:17:6:Encoder_Update	16	static
+../Core/Src/encoder.c:7:6:Encoder_Start	16	static
+../Core/Src/encoder.c:17:6:Encoder_Update	0	static

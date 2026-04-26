@@ -1,3 +1,2 @@
-../Core/Src/motor.c:5:13:set_motor	24	static
-../Core/Src/motor.c:35:6:Motor_Set	24	static
-../Core/Src/motor.c:50:6:Motor_Stop	8	static
+../Core/Src/motor.c:35:6:Motor_Set	16	static
+../Core/Src/motor.c:50:6:Motor_Stop	0	static
