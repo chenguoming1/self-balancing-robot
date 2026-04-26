@@ -4829,31 +4829,31 @@ void Motor_Set(int32_t left_speed, int32_t right_speed)
     set_motor(MOTOR_A_PWM_CH,
  80028c2:	687b      	ldr	r3, [r7, #4]
  80028c4:	9301      	str	r3, [sp, #4]
- 80028c6:	f44f 5300 	mov.w	r3, #8192	@ 0x2000
+ 80028c6:	f44f 5380 	mov.w	r3, #4096	@ 0x1000
  80028ca:	9300      	str	r3, [sp, #0]
  80028cc:	4b0b      	ldr	r3, [pc, #44]	@ (80028fc <Motor_Set+0x44>)
- 80028ce:	f44f 5280 	mov.w	r2, #4096	@ 0x1000
+ 80028ce:	f44f 5200 	mov.w	r2, #8192	@ 0x2000
  80028d2:	490a      	ldr	r1, [pc, #40]	@ (80028fc <Motor_Set+0x44>)
  80028d4:	200c      	movs	r0, #12
  80028d6:	f7ff ff49 	bl	800276c <set_motor>
-              MOTOR_A_IN2_PORT, MOTOR_A_IN2_PIN,
               MOTOR_A_IN1_PORT, MOTOR_A_IN1_PIN,
-			  left_speed);
+              MOTOR_A_IN2_PORT, MOTOR_A_IN2_PIN,
+              left_speed);
 
     /* Motor B (Right): BIN1=PB14  BIN2=PB15  PWMB=TIM1_CH1 (PA8) */
     set_motor(MOTOR_B_PWM_CH,
  80028da:	683b      	ldr	r3, [r7, #0]
  80028dc:	9301      	str	r3, [sp, #4]
- 80028de:	f44f 4380 	mov.w	r3, #16384	@ 0x4000
+ 80028de:	f44f 4300 	mov.w	r3, #32768	@ 0x8000
  80028e2:	9300      	str	r3, [sp, #0]
  80028e4:	4b05      	ldr	r3, [pc, #20]	@ (80028fc <Motor_Set+0x44>)
- 80028e6:	f44f 4200 	mov.w	r2, #32768	@ 0x8000
+ 80028e6:	f44f 4280 	mov.w	r2, #16384	@ 0x4000
  80028ea:	4904      	ldr	r1, [pc, #16]	@ (80028fc <Motor_Set+0x44>)
  80028ec:	2000      	movs	r0, #0
  80028ee:	f7ff ff3d 	bl	800276c <set_motor>
-              MOTOR_B_IN2_PORT, MOTOR_B_IN2_PIN,
               MOTOR_B_IN1_PORT, MOTOR_B_IN1_PIN,
-			  right_speed);
+              MOTOR_B_IN2_PORT, MOTOR_B_IN2_PIN,
+              right_speed);
 }
  80028f2:	bf00      	nop
  80028f4:	3708      	adds	r7, #8

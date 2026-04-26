@@ -36,15 +36,15 @@ void Motor_Set(int32_t left_speed, int32_t right_speed)
 {
     /* Motor A (Left):  AIN1=PB13  AIN2=PB12  PWMA=TIM1_CH4 (PA11) */
     set_motor(MOTOR_A_PWM_CH,
-              MOTOR_A_IN2_PORT, MOTOR_A_IN2_PIN,
               MOTOR_A_IN1_PORT, MOTOR_A_IN1_PIN,
-			  left_speed);
+              MOTOR_A_IN2_PORT, MOTOR_A_IN2_PIN,
+              left_speed);
 
     /* Motor B (Right): BIN1=PB14  BIN2=PB15  PWMB=TIM1_CH1 (PA8) */
     set_motor(MOTOR_B_PWM_CH,
-              MOTOR_B_IN2_PORT, MOTOR_B_IN2_PIN,
               MOTOR_B_IN1_PORT, MOTOR_B_IN1_PIN,
-			  right_speed);
+              MOTOR_B_IN2_PORT, MOTOR_B_IN2_PIN,
+              right_speed);
 }
 
 void Motor_Stop(void)
